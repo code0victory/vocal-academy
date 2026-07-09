@@ -14,6 +14,7 @@ const applicationAgeInput = document.querySelector("#applicationAge");
 const applicationPhoneInput = document.querySelector("#applicationPhone");
 const applicationTimeInput = document.querySelector("#applicationTime");
 const applicationSubmitButton = lessonApplicationForm?.querySelector('button[type="submit"]');
+const applicationRequiredMessage = "이름, 나이, 전화번호, 가능시간을 확인해 주세요";
 
 const reviewsApiEndpoint = window.vocaliaReviewsApiEndpoint || "";
 const applicationsApiEndpoint = window.vocaliaApplicationsApiEndpoint || "";
@@ -146,7 +147,9 @@ const submitReviewToApi = async (review) => {
 
 const submitApplicationToApi = async (application) => {
   if (!applicationsApiEndpoint || location.protocol === "file:") {
-    throw new Error("레슨 신청 서버가 연결되어 있지 않습니다");
+    const error = new Error("레슨 신청 서버가 연결되어 있지 않습니다");
+    error.code = "APPLICATION_ENDPOINT_UNAVAILABLE";
+    throw error;
   }
 
   const response = await fetch(applicationsApiEndpoint, {
@@ -320,18 +323,25 @@ if (
   applicationPhoneInput &&
   applicationTimeInput
 ) {
+  [applicationNameInput, applicationAgeInput, applicationPhoneInput, applicationTimeInput].forEach((input) => {
+    input.addEventListener("invalid", () => {
+      applicationStatus.textContent = applicationRequiredMessage;
+    });
+  });
+
   lessonApplicationForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
+    const ageValue = applicationAgeInput.value.trim();
     const application = {
       name: applicationNameInput.value.trim(),
-      age: Number(applicationAgeInput.value),
+      age: Number(ageValue),
       phone: applicationPhoneInput.value.trim(),
       availableTime: applicationTimeInput.value.trim(),
     };
 
-    if (!application.name || !application.age || !application.phone || !application.availableTime) {
-      applicationStatus.textContent = "신청 정보를 모두 입력해 주세요";
+    if (!application.name || !ageValue || !application.phone || !application.availableTime) {
+      applicationStatus.textContent = applicationRequiredMessage;
       return;
     }
 
@@ -356,8 +366,11 @@ if (
       await submitApplicationToApi(application);
       applicationStatus.textContent = "신청이 접수되었습니다. 가능한 시간 확인 후 연락드릴게요";
       lessonApplicationForm.reset();
-    } catch {
-      applicationStatus.textContent = "신청 저장에 실패했습니다. 잠시 후 다시 시도해 주세요";
+    } catch (error) {
+      applicationStatus.textContent =
+        error?.code === "APPLICATION_ENDPOINT_UNAVAILABLE"
+          ? "서버 주소에서 다시 열어 주세요. 파일로 열면 신청이 저장되지 않습니다"
+          : "신청 저장에 실패했습니다. 잠시 후 다시 시도해 주세요";
     } finally {
       if (applicationSubmitButton) {
         applicationSubmitButton.disabled = false;

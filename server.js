@@ -336,6 +336,7 @@ const sendStaticFile = async (requestUrl, response) => {
     const extension = path.extname(requestedPath).toLowerCase();
     response.writeHead(200, {
       "content-type": mimeTypes.get(extension) || "application/octet-stream",
+      "cache-control": "no-store",
     });
     response.end(file);
   } catch {
