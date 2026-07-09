@@ -1,5 +1,3 @@
-const defaultReviews = window.vocaliaDefaultReviews || [];
-
 const reviewForm = document.querySelector("#reviewForm");
 const reviewList = document.querySelector("#reviewList");
 const reviewStatus = document.querySelector("#reviewStatus");
@@ -10,8 +8,6 @@ const reviewEditPinInput = document.querySelector("#reviewEditPin");
 const allReviewsLink = document.querySelector("#allReviewsLink");
 const reviewSubmitButton = reviewForm?.querySelector('button[type="submit"]');
 
-const reviewStorageKey = window.vocaliaReviewStorageKey || "vocaliaLessonReviews";
-const legacyReviewStorageKey = window.vocaliaLegacyReviewStorageKey || "vocaliaLessonReviews";
 const reviewsApiEndpoint = window.vocaliaReviewsApiEndpoint || "";
 const homeReviewLimit = 3;
 const maxSubmittedReviews = 80;
@@ -39,7 +35,6 @@ const maskReviewerName = (name) => {
 };
 
 const reviewKey = (review) => `${review.name}|${review.course}|${review.text}`;
-const defaultReviewKeys = new Set(defaultReviews.map(reviewKey));
 
 const reviewMergeKeys = (review) => [
   review.id ? `id:${review.id}` : "",
@@ -88,40 +83,6 @@ const mergeReviews = (primaryReviews = [], fallbackReviews = []) => {
   return merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 };
 
-const readStoredReviews = (storageKey) => {
-  try {
-    const storedReviews = JSON.parse(localStorage.getItem(storageKey) || "[]");
-    return Array.isArray(storedReviews) ? storedReviews : [];
-  } catch {
-    return [];
-  }
-};
-
-const loadSubmittedReviews = () => {
-  const storedReviews = readStoredReviews(reviewStorageKey);
-  const legacyReviews = storedReviews.length > 0 ? [] : readStoredReviews(legacyReviewStorageKey);
-
-  return mergeReviews(
-    [...storedReviews, ...legacyReviews]
-      .map(normalizeReview)
-      .filter(Boolean)
-      .filter((review) => !defaultReviewKeys.has(reviewKey(review))),
-    [],
-  ).slice(0, maxSubmittedReviews);
-};
-
-const buildReviews = (submittedReviews) => mergeReviews(submittedReviews, defaultReviews);
-
-const saveSubmittedReviews = (submittedReviews) => {
-  try {
-    localStorage.setItem(reviewStorageKey, JSON.stringify(submittedReviews.slice(0, maxSubmittedReviews)));
-    return true;
-  } catch {
-    reviewStatus.textContent = "브라우저 저장소를 사용할 수 없습니다";
-    return false;
-  }
-};
-
 const fetchApiReviews = async () => {
   if (!reviewsApiEndpoint || location.protocol === "file:") {
     return null;
@@ -145,8 +106,7 @@ const fetchApiReviews = async () => {
     return mergeReviews(
       apiReviews
         .map(normalizeReview)
-        .filter(Boolean)
-        .filter((review) => !defaultReviewKeys.has(reviewKey(review))),
+        .filter(Boolean),
       [],
     ).slice(0, maxSubmittedReviews);
   } catch {
@@ -176,8 +136,8 @@ const submitReviewToApi = async (review) => {
   return normalizeReview(payload.review || payload);
 };
 
-let submittedReviews = loadSubmittedReviews();
-let reviews = buildReviews(submittedReviews);
+let reviews = [];
+let reviewsLoaded = false;
 
 const renderRating = (rating) => {
   const score = Math.min(5, Math.max(1, Number(rating) || 5));
@@ -195,6 +155,34 @@ const formatReviewDate = (value) => {
 
 const renderReviews = () => {
   if (!reviewList || !reviewStatus) {
+    return;
+  }
+
+  if (!reviewsLoaded && reviews.length === 0) {
+    reviewStatus.textContent = "후기 불러오는 중";
+    if (allReviewsLink) {
+      allReviewsLink.textContent = "전체 후기 보기";
+    }
+
+    reviewList.innerHTML = `
+      <article class="review-card">
+        <p>후기를 불러오고 있습니다.</p>
+      </article>
+    `;
+    return;
+  }
+
+  if (reviews.length === 0) {
+    reviewStatus.textContent = "등록된 후기 0개";
+    if (allReviewsLink) {
+      allReviewsLink.textContent = "전체 후기 보기";
+    }
+
+    reviewList.innerHTML = `
+      <article class="review-card">
+        <p>아직 등록된 후기가 없습니다.</p>
+      </article>
+    `;
     return;
   }
 
@@ -228,13 +216,18 @@ const renderReviews = () => {
 
 const refreshReviewsFromApi = async () => {
   const apiReviews = await fetchApiReviews();
+  reviewsLoaded = true;
   if (!apiReviews) {
+    reviewStatus.textContent = "후기를 불러오지 못했습니다";
+    reviewList.innerHTML = `
+      <article class="review-card">
+        <p>DB 후기를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
+      </article>
+    `;
     return;
   }
 
-  submittedReviews = mergeReviews(apiReviews, submittedReviews).slice(0, maxSubmittedReviews);
-  saveSubmittedReviews(submittedReviews);
-  reviews = buildReviews(submittedReviews);
+  reviews = apiReviews;
   renderReviews();
 };
 
@@ -275,16 +268,8 @@ if (reviewForm && reviewNameInput && reviewCourseInput && reviewTextInput && rev
         throw new Error("후기 저장 응답이 올바르지 않습니다");
       }
 
-      submittedReviews = [
-        savedReview,
-        ...submittedReviews.filter((storedReview) => reviewKey(storedReview) !== reviewKey(savedReview)),
-      ].slice(0, maxSubmittedReviews);
-
-      if (!saveSubmittedReviews(submittedReviews)) {
-        return;
-      }
-
-      reviews = buildReviews(submittedReviews);
+      reviewsLoaded = true;
+      reviews = mergeReviews([savedReview], reviews).slice(0, maxSubmittedReviews);
       renderReviews();
       reviewStatus.textContent = `등록 완료 · 전체 후기 ${reviews.length}개`;
       reviewForm.reset();

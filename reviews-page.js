@@ -1,6 +1,3 @@
-const defaultReviews = window.vocaliaDefaultReviews || [];
-const reviewStorageKey = window.vocaliaReviewStorageKey || "vocaliaLessonReviews";
-const legacyReviewStorageKey = window.vocaliaLegacyReviewStorageKey || "vocaliaLessonReviews";
 const reviewsApiEndpoint = window.vocaliaReviewsApiEndpoint || "";
 const maxSubmittedReviews = 80;
 
@@ -10,6 +7,7 @@ const reviewFilterBar = document.querySelector("#reviewFilterBar");
 const reviewSearch = document.querySelector("#reviewSearch");
 const reviewPageCount = document.querySelector("#reviewPageCount");
 const reviewPageAverage = document.querySelector("#reviewPageAverage");
+const reviewPageCourseCount = document.querySelector("#reviewPageCourseCount");
 
 const escapeHTML = (value) =>
   String(value ?? "")
@@ -34,7 +32,6 @@ const maskReviewerName = (name) => {
 };
 
 const reviewKey = (review) => `${review.name}|${review.course}|${review.text}`;
-const defaultReviewKeys = new Set(defaultReviews.map(reviewKey));
 
 const reviewMergeKeys = (review) => [
   review.id ? `id:${review.id}` : "",
@@ -83,43 +80,6 @@ const mergeReviews = (primaryReviews = [], fallbackReviews = []) => {
   return merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 };
 
-const readStoredReviews = (storageKey) => {
-  try {
-    const storedReviews = JSON.parse(localStorage.getItem(storageKey) || "[]");
-    return Array.isArray(storedReviews) ? storedReviews : [];
-  } catch {
-    return [];
-  }
-};
-
-const removeStoredReview = (reviewId) => {
-  const storageKeys = Array.from(new Set([reviewStorageKey, legacyReviewStorageKey].filter(Boolean)));
-
-  storageKeys.forEach((storageKey) => {
-    const storedReviews = readStoredReviews(storageKey);
-    const filteredReviews = storedReviews.filter((review) => String(review?.id || "") !== reviewId);
-
-    if (filteredReviews.length !== storedReviews.length) {
-      localStorage.setItem(storageKey, JSON.stringify(filteredReviews));
-    }
-  });
-};
-
-const loadSubmittedReviews = () => {
-  const storedReviews = readStoredReviews(reviewStorageKey);
-  const legacyReviews = storedReviews.length > 0 ? [] : readStoredReviews(legacyReviewStorageKey);
-
-  return mergeReviews(
-    [...storedReviews, ...legacyReviews]
-      .map(normalizeReview)
-      .filter(Boolean)
-      .filter((review) => !defaultReviewKeys.has(reviewKey(review))),
-    [],
-  ).slice(0, maxSubmittedReviews);
-};
-
-const loadReviews = () => mergeReviews(loadSubmittedReviews(), defaultReviews);
-
 const fetchApiReviews = async () => {
   if (!reviewsApiEndpoint || location.protocol === "file:") {
     return null;
@@ -143,8 +103,7 @@ const fetchApiReviews = async () => {
     return mergeReviews(
       apiReviews
         .map(normalizeReview)
-        .filter(Boolean)
-        .filter((review) => !defaultReviewKeys.has(reviewKey(review))),
+        .filter(Boolean),
       [],
     ).slice(0, maxSubmittedReviews);
   } catch {
@@ -209,12 +168,13 @@ const formatReviewDate = (value) => {
   return new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(date);
 };
 
-let reviews = loadReviews();
+let reviews = [];
+let reviewsLoaded = false;
 let activeCourse = "전체";
 let editingReviewId = "";
 let reviewPageMessage = "";
 
-let courses = ["전체", ...Array.from(new Set(reviews.map((review) => review.course)))];
+let courses = ["전체"];
 
 const refreshCourses = () => {
   courses = ["전체", ...Array.from(new Set(reviews.map((review) => review.course)))];
@@ -239,6 +199,9 @@ const renderSummary = () => {
   const average = reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / Math.max(reviews.length, 1);
   reviewPageCount.textContent = String(reviews.length);
   reviewPageAverage.textContent = average.toFixed(1);
+  if (reviewPageCourseCount) {
+    reviewPageCourseCount.textContent = String(Math.max(courses.length - 1, 0));
+  }
 };
 
 const renderFilters = () => {
@@ -304,8 +267,33 @@ const renderReviewTools = (review, score) => {
 };
 
 const renderReviewPage = () => {
+  if (!reviewsLoaded) {
+    reviewPageStatus.textContent = "후기를 불러오는 중입니다";
+    reviewPageList.innerHTML = `
+      <article class="review-card review-page-card">
+        <p>DB에서 후기를 불러오고 있습니다.</p>
+      </article>
+    `;
+    return;
+  }
+
   const filteredReviews = getFilteredReviews();
   reviewPageStatus.textContent = reviewPageMessage || `${filteredReviews.length}개의 후기를 보고 있습니다`;
+
+  if (filteredReviews.length === 0) {
+    const emptyMessage =
+      reviewPageMessage === "후기를 불러오지 못했습니다"
+        ? "DB 후기를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
+        : "조건에 맞는 후기가 없습니다.";
+
+    reviewPageList.innerHTML = `
+      <article class="review-card review-page-card">
+        <p>${escapeHTML(emptyMessage)}</p>
+      </article>
+    `;
+    return;
+  }
+
   reviewPageList.innerHTML = filteredReviews
     .map((review) => {
       const score = Math.min(5, Math.max(1, Number(review.rating) || 5));
@@ -384,7 +372,6 @@ reviewPageList.addEventListener("click", (event) => {
 
     deleteReviewFromApi(reviewId, { editPin })
       .then(() => {
-        removeStoredReview(reviewId);
         reviews = reviews.filter((review) => review.id !== reviewId);
         editingReviewId = "";
         reviewPageMessage = "후기가 삭제되었습니다";
@@ -449,7 +436,7 @@ reviewPageList.addEventListener("submit", async (event) => {
     reviews = mergeReviews(
       [updatedReview],
       reviews.filter((review) => review.id !== updatedReview.id),
-    ).slice(0, maxSubmittedReviews + defaultReviews.length);
+    ).slice(0, maxSubmittedReviews);
     editingReviewId = "";
     reviewPageMessage = "후기가 수정되었습니다";
     refreshCourses();
@@ -470,11 +457,16 @@ renderReviewPage();
 
 const refreshReviewsFromApi = async () => {
   const apiReviews = await fetchApiReviews();
+  reviewsLoaded = true;
   if (!apiReviews) {
+    reviewPageMessage = "후기를 불러오지 못했습니다";
+    renderSummary();
+    renderFilters();
+    renderReviewPage();
     return;
   }
 
-  reviews = mergeReviews(apiReviews, reviews).slice(0, maxSubmittedReviews + defaultReviews.length);
+  reviews = apiReviews;
   refreshCourses();
 
   renderSummary();
