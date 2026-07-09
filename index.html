@@ -21,9 +21,10 @@
         <a href="#studio-life">수업 현장</a>
         <a href="#coaches">강사 소개</a>
         <a href="./reviews.html">수강 후기</a>
+        <a href="#consult">레슨 신청</a>
       </nav>
 
-      <a class="header-cta" href="#consult">상담 예약</a>
+      <a class="header-cta" href="#consult">레슨 신청</a>
     </header>
 
     <main>
@@ -220,11 +221,52 @@
       </section>
 
       <section class="consult-section" id="consult" aria-labelledby="consult-title">
-        <div>
-          <p class="eyebrow">Consultation</p>
-          <h2 id="consult-title">첫 레슨 전, 목소리 상태부터 확인합니다.</h2>
-          <p>상담 후 목표와 일정에 맞는 코치와 과정을 추천합니다.</p>
+        <div class="application-copy">
+          <p class="eyebrow">Lesson Application</p>
+          <h2 id="consult-title">가능한 시간에 맞춰 첫 레슨을 제안합니다.</h2>
+          <p>신청 내용을 확인한 뒤 목소리 목표와 일정에 맞는 코치, 과정, 첫 레슨 시간을 안내합니다.</p>
+          <dl class="application-points" aria-label="신청 안내">
+            <div>
+              <dt>응답 방식</dt>
+              <dd>문자 또는 전화</dd>
+            </div>
+            <div>
+              <dt>확인 항목</dt>
+              <dd>목표 · 시간 · 레슨 과정</dd>
+            </div>
+          </dl>
         </div>
+
+        <form class="application-form" id="lessonApplicationForm">
+          <div class="application-form-head">
+            <strong>보컬 레슨 신청</strong>
+            <span id="applicationStatus" aria-live="polite">신청 정보를 입력해 주세요</span>
+          </div>
+
+          <div class="application-grid">
+            <label for="applicationName">
+              이름
+              <input id="applicationName" name="applicationName" type="text" autocomplete="name" maxlength="24" placeholder="예: 김하윤" required />
+            </label>
+
+            <label for="applicationAge">
+              나이
+              <input id="applicationAge" name="applicationAge" type="number" inputmode="numeric" min="7" max="80" placeholder="예: 24" required />
+            </label>
+          </div>
+
+          <label for="applicationPhone">
+            전화번호
+            <input id="applicationPhone" name="applicationPhone" type="tel" autocomplete="tel" maxlength="24" placeholder="예: 010-1234-5678" required />
+          </label>
+
+          <label for="applicationTime">
+            가능시간
+            <textarea id="applicationTime" name="applicationTime" rows="4" maxlength="120" placeholder="예: 평일 저녁 7시 이후, 토요일 오후 가능" required></textarea>
+          </label>
+
+          <button class="primary-button" type="submit">신청 보내기</button>
+        </form>
       </section>
     </main>
 

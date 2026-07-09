@@ -7,8 +7,16 @@ const reviewTextInput = document.querySelector("#reviewText");
 const reviewEditPinInput = document.querySelector("#reviewEditPin");
 const allReviewsLink = document.querySelector("#allReviewsLink");
 const reviewSubmitButton = reviewForm?.querySelector('button[type="submit"]');
+const lessonApplicationForm = document.querySelector("#lessonApplicationForm");
+const applicationStatus = document.querySelector("#applicationStatus");
+const applicationNameInput = document.querySelector("#applicationName");
+const applicationAgeInput = document.querySelector("#applicationAge");
+const applicationPhoneInput = document.querySelector("#applicationPhone");
+const applicationTimeInput = document.querySelector("#applicationTime");
+const applicationSubmitButton = lessonApplicationForm?.querySelector('button[type="submit"]');
 
 const reviewsApiEndpoint = window.vocaliaReviewsApiEndpoint || "";
+const applicationsApiEndpoint = window.vocaliaApplicationsApiEndpoint || "";
 const homeReviewLimit = 3;
 const maxSubmittedReviews = 80;
 
@@ -134,6 +142,27 @@ const submitReviewToApi = async (review) => {
 
   const payload = await response.json();
   return normalizeReview(payload.review || payload);
+};
+
+const submitApplicationToApi = async (application) => {
+  if (!applicationsApiEndpoint || location.protocol === "file:") {
+    throw new Error("레슨 신청 서버가 연결되어 있지 않습니다");
+  }
+
+  const response = await fetch(applicationsApiEndpoint, {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(application),
+  });
+
+  if (!response.ok) {
+    throw new Error("레슨 신청에 실패했습니다");
+  }
+
+  return response.json();
 };
 
 let reviews = [];
@@ -278,6 +307,60 @@ if (reviewForm && reviewNameInput && reviewCourseInput && reviewTextInput && rev
     } finally {
       if (reviewSubmitButton) {
         reviewSubmitButton.disabled = false;
+      }
+    }
+  });
+}
+
+if (
+  lessonApplicationForm &&
+  applicationStatus &&
+  applicationNameInput &&
+  applicationAgeInput &&
+  applicationPhoneInput &&
+  applicationTimeInput
+) {
+  lessonApplicationForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const application = {
+      name: applicationNameInput.value.trim(),
+      age: Number(applicationAgeInput.value),
+      phone: applicationPhoneInput.value.trim(),
+      availableTime: applicationTimeInput.value.trim(),
+    };
+
+    if (!application.name || !application.age || !application.phone || !application.availableTime) {
+      applicationStatus.textContent = "신청 정보를 모두 입력해 주세요";
+      return;
+    }
+
+    if (!Number.isInteger(application.age) || application.age < 7 || application.age > 80) {
+      applicationStatus.textContent = "나이는 7세부터 80세까지 입력할 수 있습니다";
+      applicationAgeInput.focus();
+      return;
+    }
+
+    if (!/^[0-9+\-\s()]{8,24}$/.test(application.phone)) {
+      applicationStatus.textContent = "전화번호를 다시 확인해 주세요";
+      applicationPhoneInput.focus();
+      return;
+    }
+
+    applicationStatus.textContent = "신청을 보내는 중입니다";
+    if (applicationSubmitButton) {
+      applicationSubmitButton.disabled = true;
+    }
+
+    try {
+      await submitApplicationToApi(application);
+      applicationStatus.textContent = "신청이 접수되었습니다. 가능한 시간 확인 후 연락드릴게요";
+      lessonApplicationForm.reset();
+    } catch {
+      applicationStatus.textContent = "신청 저장에 실패했습니다. 잠시 후 다시 시도해 주세요";
+    } finally {
+      if (applicationSubmitButton) {
+        applicationSubmitButton.disabled = false;
       }
     }
   });

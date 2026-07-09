@@ -63,10 +63,11 @@ const port = Number(process.env.PORT || 4176);
 const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
 const mongoDbName = process.env.MONGODB_DB || "vocal_academy";
 const reviewsCollectionName = process.env.MONGODB_REVIEWS_COLLECTION || "reviews";
+const applicationsCollectionName = process.env.MONGODB_APPLICATIONS_COLLECTION || "lesson_applications";
 
 let mongoClientPromise;
 
-const getReviewsCollection = async () => {
+const getMongoCollection = async (collectionName) => {
   if (!mongoUri) {
     const error = new Error("MONGODB_URI is not configured");
     error.statusCode = 503;
@@ -78,8 +79,12 @@ const getReviewsCollection = async () => {
   }
 
   const client = await mongoClientPromise;
-  return client.db(mongoDbName).collection(reviewsCollectionName);
+  return client.db(mongoDbName).collection(collectionName);
 };
+
+const getReviewsCollection = () => getMongoCollection(reviewsCollectionName);
+
+const getApplicationsCollection = () => getMongoCollection(applicationsCollectionName);
 
 const sendJson = (response, statusCode, payload) => {
   response.writeHead(statusCode, {
@@ -159,6 +164,32 @@ const normalizeReviewPayload = (payload) => {
   };
 };
 
+const normalizeApplicationPayload = (payload) => {
+  const name = trimToLength(payload.name, 24);
+  const age = Number(payload.age);
+  const phone = trimToLength(payload.phone, 24);
+  const availableTime = trimToLength(payload.availableTime, 120);
+
+  if (!name || !Number.isInteger(age) || age < 7 || age > 80 || !phone || !availableTime) {
+    const error = new Error("Name, age, phone, and available time are required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!/^[0-9+\-\s()]{8,24}$/.test(phone)) {
+    const error = new Error("Phone number format is invalid");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return {
+    name,
+    age,
+    phone,
+    availableTime,
+  };
+};
+
 const formatReview = (review) => ({
   id: String(review._id || review.id || ""),
   name: review.name,
@@ -167,6 +198,15 @@ const formatReview = (review) => ({
   text: review.text,
   createdAt: review.createdAt instanceof Date ? review.createdAt.toISOString() : review.createdAt,
   editable: Boolean(review.editPinHash),
+});
+
+const formatApplication = (application) => ({
+  id: String(application._id || application.id || ""),
+  name: application.name,
+  age: application.age,
+  phone: application.phone,
+  availableTime: application.availableTime,
+  createdAt: application.createdAt instanceof Date ? application.createdAt.toISOString() : application.createdAt,
 });
 
 const handleReviewsApi = async (request, response) => {
@@ -199,6 +239,27 @@ const handleReviewsApi = async (request, response) => {
   }
 
   sendJson(response, 405, { error: "Method not allowed" });
+};
+
+const handleApplicationsApi = async (request, response) => {
+  const collection = await getApplicationsCollection();
+
+  if (request.method !== "POST") {
+    sendJson(response, 405, { error: "Method not allowed" });
+    return;
+  }
+
+  const payload = await readJsonBody(request);
+  const application = {
+    ...normalizeApplicationPayload(payload),
+    status: "new",
+    createdAt: new Date(),
+  };
+  const result = await collection.insertOne(application);
+
+  sendJson(response, 201, {
+    application: formatApplication({ ...application, _id: result.insertedId }),
+  });
 };
 
 const handleReviewItemApi = async (request, response, requestUrl) => {
@@ -294,6 +355,11 @@ const server = http.createServer(async (request, response) => {
 
     if (requestUrl.pathname.startsWith("/api/reviews/")) {
       await handleReviewItemApi(request, response, requestUrl);
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/applications") {
+      await handleApplicationsApi(request, response);
       return;
     }
 
