@@ -6,6 +6,7 @@ const reviewStatus = document.querySelector("#reviewStatus");
 const reviewNameInput = document.querySelector("#reviewName");
 const reviewCourseInput = document.querySelector("#reviewCourse");
 const reviewTextInput = document.querySelector("#reviewText");
+const reviewEditPinInput = document.querySelector("#reviewEditPin");
 const allReviewsLink = document.querySelector("#allReviewsLink");
 const reviewSubmitButton = reviewForm?.querySelector('button[type="submit"]');
 
@@ -40,6 +41,11 @@ const maskReviewerName = (name) => {
 const reviewKey = (review) => `${review.name}|${review.course}|${review.text}`;
 const defaultReviewKeys = new Set(defaultReviews.map(reviewKey));
 
+const reviewMergeKeys = (review) => [
+  review.id ? `id:${review.id}` : "",
+  `content:${reviewKey(review)}`,
+].filter(Boolean);
+
 const trimToLength = (value, maxLength) => String(value ?? "").trim().slice(0, maxLength);
 
 const normalizeReview = (review) => {
@@ -61,6 +67,7 @@ const normalizeReview = (review) => {
     rating,
     text,
     createdAt: Number.isNaN(createdAt.getTime()) ? new Date().toISOString() : createdAt.toISOString(),
+    editable: Boolean(review?.editable && review?.id),
   };
 };
 
@@ -69,11 +76,13 @@ const mergeReviews = (primaryReviews = [], fallbackReviews = []) => {
   const merged = [];
 
   [...primaryReviews, ...fallbackReviews].forEach((review) => {
-    const key = reviewKey(review);
-    if (!seen.has(key)) {
-      seen.add(key);
-      merged.push(review);
+    const keys = reviewMergeKeys(review);
+    if (keys.some((key) => seen.has(key))) {
+      return;
     }
+
+    keys.forEach((key) => seen.add(key));
+    merged.push(review);
   });
 
   return merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -229,11 +238,12 @@ const refreshReviewsFromApi = async () => {
   renderReviews();
 };
 
-if (reviewForm && reviewNameInput && reviewCourseInput && reviewTextInput) {
+if (reviewForm && reviewNameInput && reviewCourseInput && reviewTextInput && reviewEditPinInput) {
   reviewForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const selectedRating = reviewForm.querySelector('input[name="reviewRating"]:checked');
+    const editPin = reviewEditPinInput.value.trim();
     const review = normalizeReview({
       id: `review-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name: reviewNameInput.value.trim(),
@@ -248,13 +258,19 @@ if (reviewForm && reviewNameInput && reviewCourseInput && reviewTextInput) {
       return;
     }
 
+    if (editPin.length < 4) {
+      reviewStatus.textContent = "수정 비밀번호를 4자 이상 입력해 주세요";
+      reviewEditPinInput.focus();
+      return;
+    }
+
     reviewStatus.textContent = "후기를 저장하는 중입니다";
     if (reviewSubmitButton) {
       reviewSubmitButton.disabled = true;
     }
 
     try {
-      const savedReview = await submitReviewToApi(review);
+      const savedReview = await submitReviewToApi({ ...review, editPin });
       if (!savedReview) {
         throw new Error("후기 저장 응답이 올바르지 않습니다");
       }

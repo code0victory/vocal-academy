@@ -926,6 +926,81 @@ textarea:focus {
   line-height: 1.72;
 }
 
+.review-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.review-edit-button {
+  min-height: 38px;
+  border: 1px solid rgba(21, 23, 25, 0.16);
+  border-radius: 999px;
+  padding: 0 14px;
+  background: #fffaf1;
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.review-edit-button:hover,
+.review-edit-button:focus-visible {
+  border-color: var(--teal);
+  color: var(--teal-dark);
+}
+
+.review-edit-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  border-top: 1px solid rgba(21, 23, 25, 0.12);
+  padding-top: 16px;
+}
+
+.review-edit-form label {
+  color: var(--ink);
+}
+
+.review-edit-form input,
+.review-edit-form textarea,
+.review-edit-form select {
+  width: 100%;
+  border: 1px solid rgba(21, 23, 25, 0.16);
+  border-radius: 8px;
+  outline: 0;
+  background: #fffaf1;
+  color: var(--ink);
+}
+
+.review-edit-form input,
+.review-edit-form select {
+  min-height: 46px;
+  padding: 0 13px;
+}
+
+.review-edit-form textarea {
+  min-height: 116px;
+  padding: 13px;
+  line-height: 1.6;
+}
+
+.review-edit-form input::placeholder {
+  color: rgba(21, 23, 25, 0.42);
+}
+
+.review-edit-form input:focus,
+.review-edit-form textarea:focus,
+.review-edit-form select:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 4px rgba(30, 184, 170, 0.16);
+}
+
+.review-edit-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 .reviews-page-main {
   background: var(--paper);
 }
@@ -1261,6 +1336,19 @@ textarea:focus {
   .review-form,
   .review-card {
     padding: 18px;
+  }
+
+  .review-card-actions,
+  .review-edit-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .review-card-actions {
+    display: grid;
+  }
+
+  .review-edit-button {
+    width: 100%;
   }
 
   .review-archive-heading {
