@@ -92,6 +92,19 @@ const readStoredReviews = (storageKey) => {
   }
 };
 
+const removeStoredReview = (reviewId) => {
+  const storageKeys = Array.from(new Set([reviewStorageKey, legacyReviewStorageKey].filter(Boolean)));
+
+  storageKeys.forEach((storageKey) => {
+    const storedReviews = readStoredReviews(storageKey);
+    const filteredReviews = storedReviews.filter((review) => String(review?.id || "") !== reviewId);
+
+    if (filteredReviews.length !== storedReviews.length) {
+      localStorage.setItem(storageKey, JSON.stringify(filteredReviews));
+    }
+  });
+};
+
 const loadSubmittedReviews = () => {
   const storedReviews = readStoredReviews(reviewStorageKey);
   const legacyReviews = storedReviews.length > 0 ? [] : readStoredReviews(legacyReviewStorageKey);
@@ -159,6 +172,27 @@ const updateReviewInApi = async (reviewId, payload) => {
 
   const payloadBody = await response.json();
   return normalizeReview(payloadBody.review || payloadBody);
+};
+
+const deleteReviewFromApi = async (reviewId, payload) => {
+  if (!reviewsApiEndpoint || location.protocol === "file:") {
+    throw new Error("후기 삭제 서버가 연결되어 있지 않습니다");
+  }
+
+  const response = await fetch(`${reviewsApiEndpoint}/${encodeURIComponent(reviewId)}`, {
+    method: "DELETE",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error("후기 삭제에 실패했습니다");
+  }
+
+  return response.json();
 };
 
 const renderRating = (rating) => {
@@ -247,6 +281,7 @@ const renderReviewEditForm = (review, score) => `
     </label>
     <div class="review-edit-actions">
       <button class="primary-button" type="submit">수정 저장</button>
+      <button class="review-delete-button" type="button" data-review-delete>후기 삭제</button>
       <button class="review-edit-button" type="button" data-review-edit-cancel>취소</button>
     </div>
   </form>
@@ -311,12 +346,59 @@ reviewSearch.addEventListener("input", () => {
 
 reviewPageList.addEventListener("click", (event) => {
   const editButton = event.target.closest("button[data-review-edit]");
+  const deleteButton = event.target.closest("button[data-review-delete]");
   const cancelButton = event.target.closest("button[data-review-edit-cancel]");
 
   if (editButton) {
     editingReviewId = editButton.dataset.reviewEdit;
     reviewPageMessage = "";
     renderReviewPage();
+    return;
+  }
+
+  if (deleteButton) {
+    const form = deleteButton.closest("form[data-review-edit-form]");
+    if (!form) {
+      return;
+    }
+
+    const reviewId = form?.dataset.reviewEditForm || "";
+    const editPinInput = form?.querySelector('input[name="editPin"]');
+    const editPin = editPinInput?.value.trim() || "";
+
+    if (editPin.length < 4) {
+      reviewPageStatus.textContent = "삭제하려면 수정 비밀번호를 입력해 주세요";
+      editPinInput?.focus();
+      return;
+    }
+
+    if (!confirm("후기를 삭제할까요? 삭제 후 되돌릴 수 없습니다.")) {
+      return;
+    }
+
+    const buttons = form.querySelectorAll("button");
+    buttons.forEach((button) => {
+      button.disabled = true;
+    });
+    reviewPageStatus.textContent = "후기를 삭제하는 중입니다";
+
+    deleteReviewFromApi(reviewId, { editPin })
+      .then(() => {
+        removeStoredReview(reviewId);
+        reviews = reviews.filter((review) => review.id !== reviewId);
+        editingReviewId = "";
+        reviewPageMessage = "후기가 삭제되었습니다";
+        refreshCourses();
+        renderSummary();
+        renderFilters();
+        renderReviewPage();
+      })
+      .catch(() => {
+        reviewPageStatus.textContent = "수정 비밀번호를 확인해 주세요";
+        buttons.forEach((button) => {
+          button.disabled = false;
+        });
+      });
     return;
   }
 

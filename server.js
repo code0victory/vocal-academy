@@ -210,7 +210,7 @@ const handleReviewItemApi = async (request, response, requestUrl) => {
     return;
   }
 
-  if (request.method !== "PATCH") {
+  if (request.method !== "PATCH" && request.method !== "DELETE") {
     sendJson(response, 405, { error: "Method not allowed" });
     return;
   }
@@ -235,6 +235,12 @@ const handleReviewItemApi = async (request, response, requestUrl) => {
   const editPinHash = createEditPinHash(editPin, existingReview.editPinSalt);
   if (!isEditPinMatch(editPinHash.hash, existingReview.editPinHash)) {
     sendJson(response, 403, { error: "Review edit password does not match" });
+    return;
+  }
+
+  if (request.method === "DELETE") {
+    await collection.deleteOne({ _id: reviewId });
+    sendJson(response, 200, { deleted: true, id });
     return;
   }
 

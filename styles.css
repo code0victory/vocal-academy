@@ -949,6 +949,23 @@ textarea:focus {
   color: var(--teal-dark);
 }
 
+.review-delete-button {
+  min-height: 38px;
+  border: 1px solid rgba(190, 72, 52, 0.28);
+  border-radius: 999px;
+  padding: 0 14px;
+  background: rgba(233, 111, 86, 0.12);
+  color: #9c2f21;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.review-delete-button:hover,
+.review-delete-button:focus-visible {
+  border-color: rgba(190, 72, 52, 0.56);
+  background: rgba(233, 111, 86, 0.18);
+}
+
 .review-edit-form {
   display: grid;
   gap: 12px;
@@ -997,7 +1014,7 @@ textarea:focus {
 
 .review-edit-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
 }
 
@@ -1348,6 +1365,10 @@ textarea:focus {
   }
 
   .review-edit-button {
+    width: 100%;
+  }
+
+  .review-delete-button {
     width: 100%;
   }
 
