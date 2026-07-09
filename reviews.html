@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>수강 후기 | Vocalia Lesson Academy</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="reviews-page">
+    <header class="site-header">
+      <a class="brand" href="./index.html#home" aria-label="Vocalia Lesson Academy 홈">
+        <span class="brand-mark" aria-hidden="true">VA</span>
+        <span>
+          <strong>Vocalia</strong>
+          <small>Lesson Academy</small>
+        </span>
+      </a>
+
+      <nav class="main-nav" aria-label="주요 메뉴">
+        <a href="./index.html#programs">프로그램</a>
+        <a href="./index.html#studio-life">수업 현장</a>
+        <a href="./index.html#coaches">강사 소개</a>
+        <a href="./reviews.html" aria-current="page">수강 후기</a>
+      </nav>
+
+      <a class="header-cta" href="./index.html#consult">상담 예약</a>
+    </header>
+
+    <main class="reviews-page-main">
+      <section class="reviews-hero" aria-labelledby="reviews-page-title">
+        <div class="reviews-hero-copy">
+          <p class="eyebrow">Lesson Reviews</p>
+          <h1 id="reviews-page-title">수강 후기</h1>
+          <p>발성, 녹음, 오디션, 취미 보컬까지 수강생들이 남긴 피드백을 모았습니다.</p>
+          <div class="hero-actions">
+            <a class="primary-button" href="#allReviews">후기 읽기</a>
+            <a class="secondary-button" href="./index.html#consult">상담 예약</a>
+          </div>
+        </div>
+
+        <aside class="reviews-summary" aria-label="후기 요약">
+          <div>
+            <strong id="reviewPageCount">21</strong>
+            <span>등록 후기</span>
+          </div>
+          <div>
+            <strong id="reviewPageAverage">4.9</strong>
+            <span>평균 평점</span>
+          </div>
+          <div>
+            <strong>8</strong>
+            <span>레슨 과정</span>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section review-archive-section" id="allReviews" aria-labelledby="all-reviews-title">
+        <div class="review-archive-heading">
+          <div class="section-heading compact-heading">
+            <p class="eyebrow">Reviews Archive</p>
+            <h2 id="all-reviews-title">전체 후기</h2>
+            <p>과정별로 골라 보거나 이름, 과정, 후기 내용으로 검색할 수 있습니다.</p>
+          </div>
+          <label class="review-search" for="reviewSearch">
+            후기 검색
+            <input id="reviewSearch" type="search" placeholder="예: 고음, 녹음, 오디션" autocomplete="off" />
+          </label>
+        </div>
+
+        <div class="review-filter-bar" id="reviewFilterBar" aria-label="후기 과정 필터"></div>
+        <div class="review-page-status" id="reviewPageStatus" aria-live="polite"></div>
+        <div class="all-review-grid" id="reviewPageList" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <strong>Vocalia Lesson Academy</strong>
+      <span>Seoul Vocal Practice Room · 2026</span>
+    </footer>
+
+    <script src="./reviews-data.js"></script>
+    <script src="./reviews-page.js"></script>
+  </body>
+</html>
