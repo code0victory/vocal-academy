@@ -20,11 +20,13 @@
 }
 
 html {
+  overflow-x: clip;
   scroll-behavior: smooth;
 }
 
 body {
-  min-width: 320px;
+  min-width: 0;
+  overflow-x: clip;
   margin: 0;
   font-family:
     Pretendard,
@@ -49,6 +51,11 @@ textarea {
 
 button {
   cursor: pointer;
+}
+
+button:disabled {
+  cursor: progress;
+  opacity: 0.62;
 }
 
 .site-header {
@@ -1136,17 +1143,75 @@ textarea:focus {
     padding: 0 16px;
   }
 
+  .brand {
+    min-width: 0;
+  }
+
+  .brand-mark {
+    width: 40px;
+    height: 40px;
+  }
+
+  .brand strong {
+    font-size: 0.94rem;
+  }
+
+  .brand small {
+    font-size: 0.72rem;
+  }
+
   .header-cta {
     display: none;
   }
 
-  .hero {
+  .hero,
+  .reviews-hero {
     min-height: auto;
-    padding: 72px 18px 34px;
+    padding: 56px 18px 34px;
+    gap: 24px;
+    background-position: center top;
   }
 
   h1 {
-    font-size: clamp(3rem, 16vw, 4.4rem);
+    max-width: 8.5em;
+    font-size: clamp(2.65rem, 13vw, 3.9rem);
+    line-height: 0.98;
+  }
+
+  .hero-copy,
+  .reviews-hero-copy p:not(.eyebrow) {
+    margin-bottom: 22px;
+    font-size: 1rem;
+    line-height: 1.72;
+  }
+
+  .hero-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .hero-actions .primary-button,
+  .hero-actions .secondary-button {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 12px;
+  }
+
+  .hero-panel {
+    padding: 20px;
+  }
+
+  .hero-panel h2 {
+    font-size: 1.24rem;
+  }
+
+  .reviews-summary div {
+    padding: 18px;
+  }
+
+  .reviews-summary strong {
+    font-size: 2rem;
   }
 
   .intro-band,
@@ -1156,6 +1221,50 @@ textarea:focus {
 
   .section {
     padding: 58px 18px;
+  }
+
+  .section-heading {
+    margin-bottom: 24px;
+  }
+
+  .section-heading h2 {
+    font-size: clamp(1.9rem, 10vw, 2.7rem);
+    line-height: 1.14;
+  }
+
+  .program-card,
+  .coach-card,
+  .review-card {
+    min-width: 0;
+  }
+
+  .program-card {
+    min-height: auto;
+  }
+
+  .program-card span,
+  .program-card h3,
+  .program-card p,
+  .program-card strong {
+    margin-right: 18px;
+    margin-left: 18px;
+  }
+
+  .photo-mosaic {
+    grid-auto-rows: minmax(220px, auto);
+  }
+
+  .review-grid {
+    gap: 14px;
+  }
+
+  .review-form,
+  .review-card {
+    padding: 18px;
+  }
+
+  .review-archive-heading {
+    gap: 16px;
   }
 
   .form-actions {

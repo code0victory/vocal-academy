@@ -175,12 +175,12 @@
           <form class="review-form" id="reviewForm">
             <label for="reviewName">
               작성자
-              <input id="reviewName" name="reviewName" type="text" autocomplete="name" placeholder="예: 김하윤" required />
+              <input id="reviewName" name="reviewName" type="text" autocomplete="name" maxlength="24" placeholder="예: 김하윤" required />
             </label>
 
             <label for="reviewCourse">
               레슨 과정
-              <input id="reviewCourse" name="reviewCourse" type="text" placeholder="예: 보컬 기초·발성 집중반" required />
+              <input id="reviewCourse" name="reviewCourse" type="text" maxlength="80" placeholder="예: 보컬 기초·발성 집중반" required />
             </label>
 
             <fieldset class="rating-field">
@@ -210,7 +210,7 @@
           <div class="review-list" id="reviewList" aria-live="polite"></div>
         </div>
         <div class="review-more">
-          <a class="secondary-button" id="allReviewsLink" href="./reviews.html">전체 후기 21개 보기</a>
+          <a class="secondary-button" id="allReviewsLink" href="./reviews.html#allReviews">전체 후기 21개 보기</a>
         </div>
       </section>
 

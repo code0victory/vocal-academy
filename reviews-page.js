@@ -1,5 +1,8 @@
 const defaultReviews = window.vocaliaDefaultReviews || [];
 const reviewStorageKey = window.vocaliaReviewStorageKey || "vocaliaLessonReviews";
+const legacyReviewStorageKey = window.vocaliaLegacyReviewStorageKey || "vocaliaLessonReviews";
+const reviewsApiEndpoint = window.vocaliaReviewsApiEndpoint || "";
+const maxSubmittedReviews = 80;
 
 const reviewPageList = document.querySelector("#reviewPageList");
 const reviewPageStatus = document.querySelector("#reviewPageStatus");
@@ -31,6 +34,31 @@ const maskReviewerName = (name) => {
 };
 
 const reviewKey = (review) => `${review.name}|${review.course}|${review.text}`;
+const defaultReviewKeys = new Set(defaultReviews.map(reviewKey));
+
+const trimToLength = (value, maxLength) => String(value ?? "").trim().slice(0, maxLength);
+
+const normalizeReview = (review) => {
+  const name = trimToLength(review?.name, 24);
+  const course = trimToLength(review?.course, 80);
+  const text = trimToLength(review?.text, 220);
+
+  if (!name || !course || !text) {
+    return null;
+  }
+
+  const createdAt = new Date(review?.createdAt);
+  const rating = Math.min(5, Math.max(1, Number(review?.rating) || 5));
+
+  return {
+    id: review?.id ? String(review.id) : "",
+    name,
+    course,
+    rating,
+    text,
+    createdAt: Number.isNaN(createdAt.getTime()) ? new Date().toISOString() : createdAt.toISOString(),
+  };
+};
 
 const mergeReviews = (primaryReviews = [], fallbackReviews = []) => {
   const seen = new Set();
@@ -47,14 +75,59 @@ const mergeReviews = (primaryReviews = [], fallbackReviews = []) => {
   return merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 };
 
-const loadReviews = () => {
+const readStoredReviews = (storageKey) => {
   try {
-    const storedReviews = JSON.parse(localStorage.getItem(reviewStorageKey) || "[]");
-    return Array.isArray(storedReviews) && storedReviews.length > 0
-      ? mergeReviews(storedReviews, defaultReviews)
-      : defaultReviews;
+    const storedReviews = JSON.parse(localStorage.getItem(storageKey) || "[]");
+    return Array.isArray(storedReviews) ? storedReviews : [];
   } catch {
-    return defaultReviews;
+    return [];
+  }
+};
+
+const loadSubmittedReviews = () => {
+  const storedReviews = readStoredReviews(reviewStorageKey);
+  const legacyReviews = storedReviews.length > 0 ? [] : readStoredReviews(legacyReviewStorageKey);
+
+  return mergeReviews(
+    [...storedReviews, ...legacyReviews]
+      .map(normalizeReview)
+      .filter(Boolean)
+      .filter((review) => !defaultReviewKeys.has(reviewKey(review))),
+    [],
+  ).slice(0, maxSubmittedReviews);
+};
+
+const loadReviews = () => mergeReviews(loadSubmittedReviews(), defaultReviews);
+
+const fetchApiReviews = async () => {
+  if (!reviewsApiEndpoint || location.protocol === "file:") {
+    return null;
+  }
+
+  try {
+    const response = await fetch(reviewsApiEndpoint, {
+      headers: { accept: "application/json" },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = await response.json();
+    const apiReviews = Array.isArray(payload) ? payload : payload.reviews;
+    if (!Array.isArray(apiReviews)) {
+      return null;
+    }
+
+    return mergeReviews(
+      apiReviews
+        .map(normalizeReview)
+        .filter(Boolean)
+        .filter((review) => !defaultReviewKeys.has(reviewKey(review))),
+      [],
+    ).slice(0, maxSubmittedReviews);
+  } catch {
+    return null;
   }
 };
 
@@ -72,10 +145,10 @@ const formatReviewDate = (value) => {
   return new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(date);
 };
 
-const reviews = loadReviews();
+let reviews = loadReviews();
 let activeCourse = "전체";
 
-const courses = ["전체", ...Array.from(new Set(reviews.map((review) => review.course)))];
+let courses = ["전체", ...Array.from(new Set(reviews.map((review) => review.course)))];
 
 const getFilteredReviews = () => {
   const query = reviewSearch.value.trim().toLowerCase();
@@ -145,3 +218,23 @@ reviewSearch.addEventListener("input", renderReviewPage);
 renderSummary();
 renderFilters();
 renderReviewPage();
+
+const refreshReviewsFromApi = async () => {
+  const apiReviews = await fetchApiReviews();
+  if (!apiReviews) {
+    return;
+  }
+
+  reviews = mergeReviews(apiReviews, reviews).slice(0, maxSubmittedReviews + defaultReviews.length);
+  courses = ["전체", ...Array.from(new Set(reviews.map((review) => review.course)))];
+
+  if (!courses.includes(activeCourse)) {
+    activeCourse = "전체";
+  }
+
+  renderSummary();
+  renderFilters();
+  renderReviewPage();
+};
+
+refreshReviewsFromApi();
