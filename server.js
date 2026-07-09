@@ -67,6 +67,12 @@ const applicationsCollectionName = process.env.MONGODB_APPLICATIONS_COLLECTION |
 
 let mongoClientPromise;
 
+const apiCorsHeaders = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET, POST, PATCH, DELETE, OPTIONS",
+  "access-control-allow-headers": "accept, content-type",
+};
+
 const getMongoCollection = async (collectionName) => {
   if (!mongoUri) {
     const error = new Error("MONGODB_URI is not configured");
@@ -90,8 +96,17 @@ const sendJson = (response, statusCode, payload) => {
   response.writeHead(statusCode, {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
+    ...apiCorsHeaders,
   });
   response.end(JSON.stringify(payload));
+};
+
+const sendNoContent = (response) => {
+  response.writeHead(204, {
+    "cache-control": "no-store",
+    ...apiCorsHeaders,
+  });
+  response.end();
 };
 
 const readJsonBody = (request) =>
@@ -348,6 +363,11 @@ const sendStaticFile = async (requestUrl, response) => {
 const server = http.createServer(async (request, response) => {
   try {
     const requestUrl = new URL(request.url, `http://${request.headers.host || "localhost"}`);
+
+    if (request.method === "OPTIONS" && requestUrl.pathname.startsWith("/api/")) {
+      sendNoContent(response);
+      return;
+    }
 
     if (requestUrl.pathname === "/api/reviews") {
       await handleReviewsApi(request, response);
