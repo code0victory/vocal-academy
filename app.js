@@ -20,6 +20,7 @@ const reviewsApiEndpoint = window.vocaliaReviewsApiEndpoint || "";
 const applicationsApiEndpoint = window.vocaliaApplicationsApiEndpoint || "";
 const homeReviewLimit = 3;
 const maxSubmittedReviews = 80;
+const applicationRequestTimeoutMs = 15000;
 
 const escapeHTML = (value) =>
   String(value ?? "")
@@ -152,14 +153,31 @@ const submitApplicationToApi = async (application) => {
     throw error;
   }
 
-  const response = await fetch(applicationsApiEndpoint, {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(application),
-  });
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), applicationRequestTimeoutMs);
+  let response;
+
+  try {
+    response = await fetch(applicationsApiEndpoint, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(application),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      const timeoutError = new Error("레슨 신청 서버 응답이 지연되고 있습니다");
+      timeoutError.code = "APPLICATION_REQUEST_TIMEOUT";
+      throw timeoutError;
+    }
+
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     throw new Error("레슨 신청에 실패했습니다");
@@ -370,7 +388,9 @@ if (
       applicationStatus.textContent =
         error?.code === "APPLICATION_ENDPOINT_UNAVAILABLE"
           ? "서버 주소에서 다시 열어 주세요. 파일로 열면 신청이 저장되지 않습니다"
-          : "신청 저장에 실패했습니다. 잠시 후 다시 시도해 주세요";
+          : error?.code === "APPLICATION_REQUEST_TIMEOUT"
+            ? "서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요"
+            : "신청 저장에 실패했습니다. 잠시 후 다시 시도해 주세요";
     } finally {
       if (applicationSubmitButton) {
         applicationSubmitButton.disabled = false;

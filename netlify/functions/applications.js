@@ -6,7 +6,7 @@ const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
 const mongoDbName = process.env.MONGODB_DB || "vocal_academy";
 const applicationsCollectionName = process.env.MONGODB_APPLICATIONS_COLLECTION || "lesson_applications";
 
-const dnsServers = String(process.env.DNS_SERVERS || "8.8.8.8,1.1.1.1")
+const dnsServers = String(process.env.DNS_SERVERS || "")
   .split(",")
   .map((server) => server.trim())
   .filter(Boolean);
@@ -16,6 +16,7 @@ if (dnsServers.length > 0) {
 }
 
 let mongoClientPromise;
+const mongoTimeoutMs = Number(process.env.MONGODB_TIMEOUT_MS || 8000);
 
 const headers = {
   "access-control-allow-origin": "*",
@@ -43,7 +44,16 @@ const getApplicationsCollection = async () => {
   }
 
   if (!mongoClientPromise) {
-    mongoClientPromise = new MongoClient(mongoUri).connect();
+    mongoClientPromise = new MongoClient(mongoUri, {
+      connectTimeoutMS: mongoTimeoutMs,
+      serverSelectionTimeoutMS: mongoTimeoutMs,
+      socketTimeoutMS: mongoTimeoutMs,
+    })
+      .connect()
+      .catch((error) => {
+        mongoClientPromise = undefined;
+        throw error;
+      });
   }
 
   const client = await mongoClientPromise;
