@@ -2,9 +2,9 @@ const dns = require("node:dns");
 const { MongoClient } = require("mongodb");
 
 const maxBodyBytes = 16 * 1024;
-const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
-const mongoDbName = process.env.MONGODB_DB || "vocal_academy";
-const applicationsCollectionName = process.env.MONGODB_APPLICATIONS_COLLECTION || "lesson_applications";
+const mongoUri = String(process.env.MONGODB_URI || process.env.MONGO_URI || "").trim();
+const mongoDbName = String(process.env.MONGODB_DB || "vocal_academy").trim();
+const applicationsCollectionName = String(process.env.MONGODB_APPLICATIONS_COLLECTION || "lesson_applications").trim();
 
 const dnsServers = String(process.env.DNS_SERVERS || "")
   .split(",")
