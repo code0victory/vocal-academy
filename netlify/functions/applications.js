@@ -114,6 +114,12 @@ const formatApplication = (application) => ({
   createdAt: application.createdAt instanceof Date ? application.createdAt.toISOString() : application.createdAt,
 });
 
+const sanitizeErrorMessage = (message) =>
+  String(message || "")
+    .replace(String(mongoUri || ""), "[redacted-mongodb-uri]")
+    .replace(/mongodb\+srv:\/\/[^@\s]+@/gi, "mongodb+srv://[redacted]@")
+    .slice(0, 500);
+
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -141,8 +147,13 @@ exports.handler = async (event) => {
       application: formatApplication({ ...application, _id: result.insertedId }),
     });
   } catch (error) {
-    return json(error.statusCode || 500, {
-      error: error.statusCode ? error.message : "Server error",
+    if (error.statusCode) {
+      return json(error.statusCode, { error: error.message });
+    }
+
+    return json(503, {
+      error: "Database connection failed",
+      detail: sanitizeErrorMessage(error.message),
     });
   }
 };

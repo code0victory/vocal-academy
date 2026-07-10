@@ -180,7 +180,10 @@ const submitApplicationToApi = async (application) => {
   }
 
   if (!response.ok) {
-    throw new Error("레슨 신청에 실패했습니다");
+    const payload = await response.json().catch(() => ({}));
+    const error = new Error(payload.detail || payload.error || "레슨 신청에 실패했습니다");
+    error.code = payload.error === "Database connection failed" ? "APPLICATION_DATABASE_UNAVAILABLE" : "";
+    throw error;
   }
 
   return response.json();
@@ -390,7 +393,9 @@ if (
           ? "서버 주소에서 다시 열어 주세요. 파일로 열면 신청이 저장되지 않습니다"
           : error?.code === "APPLICATION_REQUEST_TIMEOUT"
             ? "서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요"
-            : "신청 저장에 실패했습니다. 잠시 후 다시 시도해 주세요";
+            : error?.code === "APPLICATION_DATABASE_UNAVAILABLE"
+              ? "신청 DB 연결 확인이 필요합니다. 잠시 후 다시 시도해 주세요"
+              : "신청 저장에 실패했습니다. 잠시 후 다시 시도해 주세요";
     } finally {
       if (applicationSubmitButton) {
         applicationSubmitButton.disabled = false;
