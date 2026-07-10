@@ -9,3 +9,13 @@
   from = "/api/applications"
   to = "/.netlify/functions/applications"
   status = 200
+
+[[redirects]]
+  from = "/api/reviews"
+  to = "/.netlify/functions/reviews"
+  status = 200
+
+[[redirects]]
+  from = "/api/reviews/*"
+  to = "/.netlify/functions/reviews/:splat"
+  status = 200
