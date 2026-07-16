@@ -265,6 +265,26 @@
             <textarea id="applicationTime" name="applicationTime" rows="4" maxlength="120" placeholder="예: 평일 저녁 7시 이후, 토요일 오후 가능" required></textarea>
           </label>
 
+          <fieldset class="privacy-agreement">
+            <legend>개인정보 수집 및 이용 동의서</legend>
+            <div class="privacy-agreement-body">
+              <p><strong>수집 및 이용 목적</strong> 레슨 신청 확인, 본인 확인, 상담 및 일정 안내</p>
+              <p><strong>수집 항목</strong> 이름, 나이, 전화번호, 가능시간</p>
+              <p><strong>보유 및 이용 기간</strong> 상담 및 레슨 안내 목적 달성 후 1년까지</p>
+              <p><strong>동의 거부 안내</strong> 동의를 거부하실 수 있으나, 이 경우 레슨 신청 접수가 제한될 수 있습니다.</p>
+            </div>
+            <div class="privacy-choice" role="radiogroup" aria-label="개인정보 수집 및 이용 동의 여부">
+              <label>
+                <input id="applicationPrivacyConsentAgree" name="privacyConsent" type="radio" value="agree" required />
+                동의함
+              </label>
+              <label>
+                <input id="applicationPrivacyConsentDecline" name="privacyConsent" type="radio" value="decline" />
+                동의하지 않음
+              </label>
+            </div>
+          </fieldset>
+
           <button class="primary-button" type="submit">신청 보내기</button>
         </form>
       </section>

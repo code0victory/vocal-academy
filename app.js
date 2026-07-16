@@ -13,8 +13,11 @@ const applicationNameInput = document.querySelector("#applicationName");
 const applicationAgeInput = document.querySelector("#applicationAge");
 const applicationPhoneInput = document.querySelector("#applicationPhone");
 const applicationTimeInput = document.querySelector("#applicationTime");
+const applicationPrivacyConsentAgreeInput = document.querySelector("#applicationPrivacyConsentAgree");
+const applicationPrivacyConsentDeclineInput = document.querySelector("#applicationPrivacyConsentDecline");
 const applicationSubmitButton = lessonApplicationForm?.querySelector('button[type="submit"]');
 const applicationRequiredMessage = "이름, 나이, 전화번호, 가능시간을 확인해 주세요";
+const applicationPrivacyConsentMessage = "개인정보 수집 및 이용에 동의해야 신청할 수 있습니다";
 
 const reviewsApiEndpoint = window.vocaliaReviewsApiEndpoint || "";
 const applicationsApiEndpoint = window.vocaliaApplicationsApiEndpoint || "";
@@ -342,11 +345,26 @@ if (
   applicationNameInput &&
   applicationAgeInput &&
   applicationPhoneInput &&
-  applicationTimeInput
+  applicationTimeInput &&
+  applicationPrivacyConsentAgreeInput
 ) {
   [applicationNameInput, applicationAgeInput, applicationPhoneInput, applicationTimeInput].forEach((input) => {
     input.addEventListener("invalid", () => {
       applicationStatus.textContent = applicationRequiredMessage;
+    });
+  });
+
+  [applicationPrivacyConsentAgreeInput, applicationPrivacyConsentDeclineInput].filter(Boolean).forEach((input) => {
+    input.addEventListener("invalid", () => {
+      applicationStatus.textContent = applicationPrivacyConsentMessage;
+    });
+
+    input.addEventListener("change", () => {
+      if (!applicationPrivacyConsentAgreeInput.checked) {
+        applicationStatus.textContent = applicationPrivacyConsentMessage;
+      } else {
+        applicationStatus.textContent = "신청 정보를 입력해 주세요";
+      }
     });
   });
 
@@ -359,6 +377,7 @@ if (
       age: Number(ageValue),
       phone: applicationPhoneInput.value.trim(),
       availableTime: applicationTimeInput.value.trim(),
+      privacyConsent: applicationPrivacyConsentAgreeInput.checked,
     };
 
     if (!application.name || !ageValue || !application.phone || !application.availableTime) {
@@ -375,6 +394,12 @@ if (
     if (!/^[0-9+\-\s()]{8,24}$/.test(application.phone)) {
       applicationStatus.textContent = "전화번호를 다시 확인해 주세요";
       applicationPhoneInput.focus();
+      return;
+    }
+
+    if (!application.privacyConsent) {
+      applicationStatus.textContent = applicationPrivacyConsentMessage;
+      applicationPrivacyConsentAgreeInput.focus();
       return;
     }
 

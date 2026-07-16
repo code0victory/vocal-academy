@@ -184,9 +184,16 @@ const normalizeApplicationPayload = (payload) => {
   const age = Number(payload.age);
   const phone = trimToLength(payload.phone, 24);
   const availableTime = trimToLength(payload.availableTime, 120);
+  const privacyConsent = payload.privacyConsent === true || payload.privacyConsent === "true";
 
   if (!name || !Number.isInteger(age) || age < 7 || age > 80 || !phone || !availableTime) {
     const error = new Error("Name, age, phone, and available time are required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!privacyConsent) {
+    const error = new Error("Privacy consent is required");
     error.statusCode = 400;
     throw error;
   }
@@ -202,6 +209,7 @@ const normalizeApplicationPayload = (payload) => {
     age,
     phone,
     availableTime,
+    privacyConsent: true,
   };
 };
 
@@ -221,6 +229,9 @@ const formatApplication = (application) => ({
   age: application.age,
   phone: application.phone,
   availableTime: application.availableTime,
+  privacyConsent: Boolean(application.privacyConsent),
+  privacyConsentAt:
+    application.privacyConsentAt instanceof Date ? application.privacyConsentAt.toISOString() : application.privacyConsentAt,
   createdAt: application.createdAt instanceof Date ? application.createdAt.toISOString() : application.createdAt,
 });
 
@@ -269,6 +280,7 @@ const handleApplicationsApi = async (request, response) => {
     ...normalizeApplicationPayload(payload),
     status: "new",
     createdAt: new Date(),
+    privacyConsentAt: new Date(),
   };
   const result = await collection.insertOne(application);
 
